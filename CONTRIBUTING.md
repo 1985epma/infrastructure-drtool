@@ -9,3 +9,9 @@
    (`docs/tools/run-capture.sh`).
 
 O CI executa testes, build + smoke test + Trivy da imagem Docker, e gitleaks no histórico.
+
+## Manutenção do repositório (donos)
+
+A proteção da `main` e as configurações de segurança estão em código: `.github/harden-repo.sh`
+(requer `gh` como admin). Rode-o de novo logo após tornar o repositório público para ativar os itens "só público"
+(aprovação de PRs de forks, secret scanning com push protection e relato privado de vulnerabilidades).
