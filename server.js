@@ -2,7 +2,7 @@
 // Ponto de entrada (também o executável `epma-drtool` do pacote npm).
 // Configuração por variáveis de ambiente:
 //   PORT (3001) · HOST (127.0.0.1) · DATA_DIR (./data, relativo à pasta onde o comando roda)
-//   ADMIN_TOKEN · ALLOWED_HOSTS (lista separada por vírgula)
+//   ADMIN_TOKEN (ou ADMIN_TOKEN_FILE: caminho de um arquivo/secret com o token) · ALLOWED_HOSTS (lista separada por vírgula)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, isLoopback } from './src/app.js';
@@ -24,6 +24,7 @@ Variáveis de ambiente:
   HOST           endereço de escuta (padrão 127.0.0.1; outro valor exige ADMIN_TOKEN)
   DATA_DIR       pasta de dados: ambientes, relatórios e estado (padrão ./data)
   ADMIN_TOKEN    token (mín. 16 caracteres) exigido pela API; obrigatório fora do localhost
+  ADMIN_TOKEN_FILE  alternativa ao ADMIN_TOKEN: arquivo com o token (ex.: Docker secret em /run/secrets/…)
   ALLOWED_HOSTS  hosts adicionais aceitos no cabeçalho Host, separados por vírgula
 
 Requer Node >= ${pkg.engines.node.replace('>=', '')}. Opcionais: aws CLI, kubectl e docker.`);
@@ -32,7 +33,15 @@ Requer Node >= ${pkg.engines.node.replace('>=', '')}. Opcionais: aws CLI, kubect
 
 const host = process.env.HOST || '127.0.0.1';
 const port = Number(process.env.PORT || 3001);
-const adminToken = process.env.ADMIN_TOKEN || '';
+let adminToken = process.env.ADMIN_TOKEN || '';
+if (!adminToken && process.env.ADMIN_TOKEN_FILE) {
+  try {
+    adminToken = readFileSync(process.env.ADMIN_TOKEN_FILE, 'utf8').trim();
+  } catch (err) {
+    console.error(`Não foi possível ler ADMIN_TOKEN_FILE: ${err.message}`);
+    process.exit(1);
+  }
+}
 const allowedHosts = (process.env.ALLOWED_HOSTS || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 // Esta ferramenta liga/desliga infraestrutura: só aceita conexões externas com token.

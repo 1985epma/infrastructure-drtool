@@ -56,6 +56,43 @@ epma-drtool            # http://127.0.0.1:3001 — dados em ./data (pasta onde o
 
 Sem instalar: `npx @1985epma/infrastructure-drtool`. Requer Node ≥ 26.
 
+## Docker (imagem endurecida)
+
+O `Dockerfile` gera uma imagem mínima e endurecida (Node 26 + Alpine, base fixada por digest):
+
+```bash
+docker build -t infrastructure-drtool .                                  # completa: inclui aws CLI e kubectl (~600 MB)
+docker build --build-arg WITH_TOOLS=false -t infrastructure-drtool:slim .  # sem aws/kubectl (~260 MB)
+docker build --build-arg RUN_TESTS=true -t infrastructure-drtool .       # roda os 75 testes durante o build
+
+docker run -d --name drtool -p 127.0.0.1:3001:3001 \
+  --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --cap-drop ALL --security-opt no-new-privileges:true --pids-limit 256 --memory 512m \
+  -e ADMIN_TOKEN="$(openssl rand -hex 24)" -v drtool-data:/data \
+  infrastructure-drtool
+```
+
+Ou, com Docker secrets e as mesmas restrições, `docker compose up -d --build` (veja o `compose.yaml`).
+
+**O que a imagem faz para reduzir superfície:**
+
+- multi-stage (sem testes nem ferramentas de build na imagem final) e **sem dependências npm** (só a stdlib do Node);
+- `npm`, `npx`, `corepack`, `yarn` e o `apk` removidos; bits setuid/setgid zerados;
+- usuário **não-root** (uid 10001, sem shell de login), `tini` como PID 1;
+- código em `/app` somente leitura; o único diretório gravável é `/data` (volume);
+- **Node Permission Model** (`--permission`): o processo só lê `/app`, `/data` e `/run/secrets`, só grava em `/data` e não carrega addons nativos/WASI/workers. (`--allow-child-process` e `--allow-net` são necessários para executar `aws`/`kubectl` e para escutar/testar rede);
+- escuta em `0.0.0.0` mas **recusa iniciar sem token**: `ADMIN_TOKEN` ou `ADMIN_TOKEN_FILE` (ex.: Docker secret em `/run/secrets/admin_token`);
+- `HEALTHCHECK` na UI estática (não depende de `curl`); nenhum segredo nas camadas.
+
+**Verificado em execução:** sem token o container recusa subir; com `--read-only`, `--cap-drop ALL` e `no-new-privileges` a UI responde, a API devolve 401 sem token, `CapEff` é zero, escrita em `/app` e `/etc` falha, e um exercício completo (ambiente simulado) gera o relatório em `/data`.
+
+**Limitações:**
+
+- o `docker-cli` **não** é instalado de propósito (usá-lo exigiria montar `/var/run/docker.sock`, o que equivale a root no host); por isso, dentro do container, recursos que dependem do Docker do host (listar containers no wizard, canário via `docker exec`) não funcionam;
+- credenciais AWS: prefira variáveis `AWS_*`, role/IRSA ou monte `~/.aws` (somente leitura);
+- para `kubectl`/Kubernetes local, monte o kubeconfig e lembre que `127.0.0.1` dentro do container não é o host (Docker Desktop: use `host.docker.internal` no `server:` do kubeconfig);
+- para receber correções de segurança, atualize o digest da base (`ARG NODE_IMAGE`) e reconstrua; um scan como `trivy image infrastructure-drtool` é recomendado no CI.
+
 ## Providers
 
 Cada ambiente tem uma **base de computação** (provider). Recursos AWS (EC2/RDS/ElastiCache) podem ser anexados a qualquer

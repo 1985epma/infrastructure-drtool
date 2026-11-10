@@ -1,0 +1,44 @@
+# Execução endurecida do console. Uso:
+#   mkdir -p secrets && openssl rand -hex 24 > secrets/admin_token.txt   # token (≥ 16 caracteres)
+#   docker compose up -d --build
+#   abrir http://127.0.0.1:3001 e informar o token quando solicitado
+services:
+  drtool:
+    build:
+      context: .
+      args:
+        WITH_TOOLS: "true"          # "false" = imagem enxuta sem aws CLI/kubectl
+    image: infrastructure-drtool:local
+    ports:
+      - "127.0.0.1:3001:3001"       # exposto só no localhost do host; use um proxy TLS para acesso remoto
+    environment:
+      ADMIN_TOKEN_FILE: /run/secrets/admin_token
+      # ALLOWED_HOSTS: console.exemplo.com      # se acessar por outro hostname
+      # AWS_REGION: us-east-1
+      # AWS_PROFILE: meu-perfil
+    secrets:
+      - admin_token
+    volumes:
+      - drtool-data:/data
+      # credenciais AWS (somente leitura). Para SSO use `aws sso login` no host e monte também o cache,
+      # ou prefira variáveis AWS_* / role da instância:
+      # - ${HOME}/.aws:/home/app/.aws:ro
+      # kubeconfig para os providers k8s (somente leitura):
+      # - ${HOME}/.kube/config:/home/app/.kube/config:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+
+secrets:
+  admin_token:
+    file: ./secrets/admin_token.txt
+
+volumes:
+  drtool-data:
