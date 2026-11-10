@@ -8,6 +8,14 @@ Console web (Node.js, **zero dependências npm**) para exercícios de **RTO/RPO*
 - **Executar exercícios de DR** que derrubam o ambiente, medem o tempo até a recuperação e a perda de dados;
 - **Gerar relatórios** (HTML imprimível/PDF, Markdown, CSV, JSON e consolidado com tendência).
 
+> [!WARNING]
+> **Esta ferramenta liga, desliga e — no ElastiCache — EXCLUI recursos reais.** Leia antes de usar em produção:
+>
+> - Os fluxos de **EKS, EC2, RDS e ElastiCache foram validados apenas com `aws`/`kubectl` simulados** (75 testes automatizados) e contra um Kubernetes local; **não foram exercitados contra uma conta AWS real**. Comece por um ambiente **descartável** e use o ambiente simulado para treinar.
+> - O **ElastiCache não tem stop/start**: "desligar" exclui o recurso (com snapshot final) e "ligar" o recria a partir do snapshot — o endpoint pode mudar e os dados gravados depois do snapshot se perdem. A restauração de cache **Serverless** por snapshot não foi confirmada contra a AWS real.
+> - Rode exercícios em **janelas planejadas**; as operações destrutivas exigem confirmação pelo nome do ambiente.
+> - Software fornecido **"como está", sem garantias** (licença [MIT](LICENSE)). Você é responsável pelo que executar na sua infraestrutura.
+
 ## Requisitos
 
 | Item | Observação |
