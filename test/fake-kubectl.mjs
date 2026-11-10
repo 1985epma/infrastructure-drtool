@@ -6,7 +6,7 @@
 //
 // Estado: { contexts, current, ticks, unreachable, workloads: { "ns/kind/nome": {desired, ready, current, settle} } }
 // Convergência: após um `scale`, as réplicas só convergem depois de `ticks` leituras (get) do workload.
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from 'node:fs';
 
 const STATE = process.env.FAKE_KUBE_STATE;
 const LOG = process.env.FAKE_KUBE_LOG;
@@ -43,7 +43,12 @@ const unlock = () => {
 process.on('exit', unlock);
 
 const s = JSON.parse(readFileSync(STATE, 'utf8'));
-const save = () => writeFileSync(STATE, JSON.stringify(s));
+// gravação atômica (tmp + rename): o servidor HTTP do teste lê este arquivo em paralelo
+const save = () => {
+  const tmp = `${STATE}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(s));
+  renameSync(tmp, STATE);
+};
 const log = (extra = {}) => LOG && appendFileSync(LOG, `${JSON.stringify({ argv, globals, args, ...extra })}\n`);
 const die = (msg, code = 1) => {
   process.stderr.write(`${msg}\n`);

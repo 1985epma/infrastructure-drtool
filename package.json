@@ -1,6 +1,6 @@
 {
   "name": "@1985epma/infrastructure-drtool",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "EPMA | Infrastructure & DR Tool — console web para exercícios de RTO/RPO: liga/desliga EKS, EC2, RDS, ElastiCache e Kubernetes local, testa aplicações e gera relatórios",
   "type": "module",
   "main": "server.js",
@@ -12,7 +12,8 @@
     "src",
     "public",
     "scripts",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=26"
@@ -45,5 +46,5 @@
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
   },
-  "license": "UNLICENSED"
+  "license": "MIT"
 }

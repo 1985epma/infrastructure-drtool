@@ -422,3 +422,7 @@ public/                interface (JS puro, sem build)
   js/pages/                                   painel, testes, exercício, relatórios, ambientes
 test/                  node --test (unitários, integração no ambiente simulado, canário, recursos AWS com `aws` falso)
 ```
+
+## Licença
+
+[MIT](LICENSE) © 2026 1985epma
