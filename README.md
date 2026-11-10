@@ -38,6 +38,24 @@ npm run dev          # recarrega ao editar
 Na primeira execução é criado o **ambiente de demonstração (simulado)**: um cluster fictício com testes apontando
 para endpoints locais `/demo/...` que reagem ao liga/desliga. Dá para rodar um exercício completo sem tocar na AWS.
 
+## Instalar como pacote npm (GitHub Packages)
+
+O pacote `@1985epma/infrastructure-drtool` é publicado no registro npm do GitHub (`npm.pkg.github.com`) pelo workflow
+`.github/workflows/publish.yml` (ao publicar um Release, ou manualmente em *Actions → Run workflow*). Como o repositório
+é privado, a instalação exige um token pessoal (classic) com o escopo `read:packages`:
+
+```bash
+# ~/.npmrc (uma vez)
+@1985epma:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=SEU_TOKEN_COM_read:packages
+
+npm install -g @1985epma/infrastructure-drtool
+epma-drtool --help
+epma-drtool            # http://127.0.0.1:3001 — dados em ./data (pasta onde o comando é executado)
+```
+
+Sem instalar: `npx @1985epma/infrastructure-drtool`. Requer Node ≥ 26.
+
 ## Providers
 
 Cada ambiente tem uma **base de computação** (provider). Recursos AWS (EC2/RDS/ElastiCache) podem ser anexados a qualquer

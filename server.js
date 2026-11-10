@@ -1,6 +1,34 @@
-// Ponto de entrada. Configuração por variáveis de ambiente:
-//   PORT (3001) · HOST (127.0.0.1) · DATA_DIR (./data) · ADMIN_TOKEN · ALLOWED_HOSTS (lista separada por vírgula)
+#!/usr/bin/env node
+// Ponto de entrada (também o executável `epma-drtool` do pacote npm).
+// Configuração por variáveis de ambiente:
+//   PORT (3001) · HOST (127.0.0.1) · DATA_DIR (./data, relativo à pasta onde o comando roda)
+//   ADMIN_TOKEN · ALLOWED_HOSTS (lista separada por vírgula)
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createApp, isLoopback } from './src/app.js';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const args = process.argv.slice(2);
+
+if (args.includes('--version') || args.includes('-v')) {
+  console.log(pkg.version);
+  process.exit(0);
+}
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(`EPMA | Infrastructure & DR Tool v${pkg.version}
+
+Uso: epma-drtool [--help] [--version]
+
+Variáveis de ambiente:
+  PORT           porta HTTP (padrão 3001)
+  HOST           endereço de escuta (padrão 127.0.0.1; outro valor exige ADMIN_TOKEN)
+  DATA_DIR       pasta de dados: ambientes, relatórios e estado (padrão ./data)
+  ADMIN_TOKEN    token (mín. 16 caracteres) exigido pela API; obrigatório fora do localhost
+  ALLOWED_HOSTS  hosts adicionais aceitos no cabeçalho Host, separados por vírgula
+
+Requer Node >= ${pkg.engines.node.replace('>=', '')}. Opcionais: aws CLI, kubectl e docker.`);
+  process.exit(0);
+}
 
 const host = process.env.HOST || '127.0.0.1';
 const port = Number(process.env.PORT || 3001);
@@ -17,11 +45,14 @@ if (adminToken && adminToken.length < 16) {
   process.exit(1);
 }
 
-const app = await createApp({ host, port, adminToken, allowedHosts, dataDir: process.env.DATA_DIR || undefined });
+// Os dados ficam na pasta de trabalho (não dentro do pacote instalado, que é substituído nas atualizações).
+const dataDir = process.env.DATA_DIR || join(process.cwd(), 'data');
+const app = await createApp({ host, port, adminToken, allowedHosts, dataDir });
 const seeded = await app.seedDemo();
 const { port: actual } = await app.listen();
 
 console.log(`EPMA | Infrastructure & DR Tool rodando em http://${host === '0.0.0.0' ? 'localhost' : host}:${actual}  (Node ${process.version})`);
+console.log(`Dados em ${dataDir}`);
 if (seeded) console.log('Ambiente de demonstração (simulado) criado — experimente o fluxo completo sem AWS.');
 if (adminToken) console.log('Autenticação por token habilitada.');
 

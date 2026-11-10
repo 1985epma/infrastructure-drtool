@@ -1,6 +1,7 @@
 // Montagem da aplicação: rotas da API, segurança e ciclo de vida do servidor.
 import { createServer } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runChecks } from './checks.js';
@@ -18,6 +19,7 @@ import { HttpError, UserError } from './util.js';
 import { normalizeDrillParams, normalizeEnvironment } from './validate.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const PKG_VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
 export const isLoopback = (host) => LOOPBACK.has(String(host).toLowerCase());
@@ -71,7 +73,7 @@ export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.
   const r = new Router();
 
   r.get('/api/meta', async ({ query }) => ({
-    version: '1.0.0',
+    version: PKG_VERSION,
     node: process.version,
     tools: await getTools(query.get('refresh') === '1'),
     authRequired: Boolean(tokenBuf),
