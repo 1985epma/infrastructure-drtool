@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
@@ -154,7 +155,7 @@ describe('autenticação por token', () => {
   let dir;
   let app;
   let base;
-  const token = 'segredo-bem-longo-1234';
+  const token = randomBytes(16).toString('hex'); // gerado a cada execução (sem literal no repositório)
   before(async () => {
     dir = await mkdtemp(join(tmpdir(), 'eksdr-auth-'));
     app = await createApp({ dataDir: dir, port: 0, adminToken: token });

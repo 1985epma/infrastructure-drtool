@@ -1,0 +1,88 @@
+name: CI
+
+# Roda em todo PR e em todo push na main. Tokens somente leitura; nenhuma ação usa pull_request_target.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Testes (Node 26)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+
+      - name: Sintaxe (todos os arquivos JS)
+        run: |
+          set -eu
+          for f in server.js src/*.js src/providers/*.js public/js/*.js public/js/pages/*.js docs/tools/*.mjs; do
+            node --check "$f"
+          done
+
+      - name: Testes
+        run: npm test
+
+  docker:
+    name: Imagem Docker (build, smoke, Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build --build-arg VERSION=ci --build-arg VCS_REF=${{ github.sha }} -t drtool:ci .
+
+      - name: Smoke test (rootfs somente leitura, sem capabilities, com token)
+        run: |
+          set -eu
+          TOKEN="$(openssl rand -hex 24)"
+          docker run -d --name drtool -p 127.0.0.1:3001:3001 --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            --cap-drop ALL --security-opt no-new-privileges:true --pids-limit 256 -e ADMIN_TOKEN="$TOKEN" drtool:ci
+          for _ in $(seq 1 40); do curl -fs http://127.0.0.1:3001/ >/dev/null 2>&1 && break; sleep 0.5; done
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/)" = "200" ]
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/api/environments)" = "401" ]
+          [ "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3001/api/environments)" = "200" ]
+          # sem token o container deve se recusar a subir fora do localhost
+          if docker run --rm drtool:ci >/dev/null 2>&1; then echo "ERRO: subiu sem ADMIN_TOKEN"; exit 1; fi
+          docker rm -f drtool >/dev/null
+
+      - name: Trivy (vulnerabilidades HIGH/CRITICAL com correção disponível)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: drtool:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+
+  secrets:
+    name: Segredos (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # histórico completo
+          persist-credentials: false
+
+      - name: Gitleaks (histórico completo)
+        run: docker run --rm -v "$PWD:/repo:ro" zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f git --redact --no-banner /repo

@@ -1,0 +1,2 @@
+# Falso positivo: token FICTÍCIO usado no teste de autenticação (já substituído por um valor gerado em runtime).
+615d363596681778c86df96618482f2250c6ee63:test/integration.test.js:generic-api-key:157

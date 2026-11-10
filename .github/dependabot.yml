@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # ações do GitHub (fixadas por SHA: o Dependabot atualiza o SHA e o comentário da versão)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      actions: { patterns: ['*'] }
+
+  # imagem base do Dockerfile (fixada por digest)
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly }
+
+  # única dependência npm: ferramentas de documentação (docs/tools). O app em si não tem dependências.
+  - package-ecosystem: npm
+    directory: /docs/tools
+    schedule: { interval: monthly }
