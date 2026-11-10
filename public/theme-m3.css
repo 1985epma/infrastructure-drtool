@@ -1,0 +1,174 @@
+/* ============================================================================
+   Tema Google Material Design 3 (padrão) — esquema "baseline" claro/escuro.
+   Tokens md.sys.color.* + forma, tipografia e estados (state layers) do M3.
+   Ativo quando <html data-style="m3">. O estilo "Clássico" é o styles.css puro.
+   Claro/escuro vêm de light-dark() + color-scheme (ver styles.css e theme.js).
+   ========================================================================== */
+html[data-style='m3'] {
+  /* --- md.sys.color --- */
+  --md-primary: light-dark(#6750a4, #d0bcff);
+  --md-on-primary: light-dark(#ffffff, #381e72);
+  --md-primary-container: light-dark(#eaddff, #4f378b);
+  --md-on-primary-container: light-dark(#21005d, #eaddff);
+  --md-secondary-container: light-dark(#e8def8, #4a4458);
+  --md-on-secondary-container: light-dark(#1d192b, #e8def8);
+  --md-error: light-dark(#b3261e, #f2b8b5);
+  --md-on-error: light-dark(#ffffff, #601410);
+  --md-error-container: light-dark(#f9dedc, #8c1d18);
+  --md-on-error-container: light-dark(#410e0b, #f9dedc);
+  --md-surface: light-dark(#fef7ff, #141218);
+  --md-on-surface: light-dark(#1d1b20, #e6e0e9);
+  --md-on-surface-variant: light-dark(#49454f, #cac4d0);
+  --md-outline: light-dark(#79747e, #938f99);
+  --md-outline-variant: light-dark(#cac4d0, #49454f);
+  --md-sc-lowest: light-dark(#ffffff, #0f0d13);
+  --md-sc-low: light-dark(#f7f2fa, #1d1b20);
+  --md-sc: light-dark(#f3edf7, #211f26);
+  --md-sc-high: light-dark(#ece6f0, #2b2930);
+  --md-sc-highest: light-dark(#e6e0e9, #36343b);
+  --md-inverse-surface: light-dark(#322f35, #e6e0e9);
+  --md-inverse-on-surface: light-dark(#f5eff7, #322f35);
+  /* estados semânticos (extensão de cor do M3 para sucesso/atenção) */
+  --md-success: light-dark(#1b6b3a, #7dda94);
+  --md-success-container: light-dark(#bdefc8, #0f3d20);
+  --md-warning: light-dark(#6f4e00, #f4bf4f);
+  --md-warning-container: light-dark(#ffdea0, #4a3600);
+
+  /* --- mapeamento para as variáveis usadas pelo app --- */
+  --bg: var(--md-surface);
+  --panel: var(--md-sc-low);
+  --panel-2: var(--md-sc);
+  --text: var(--md-on-surface);
+  --muted: var(--md-on-surface-variant);
+  --border: var(--md-outline-variant);
+  --accent: var(--md-primary);
+  --accent-fg: var(--md-on-primary);
+  --accent-soft: var(--md-secondary-container);
+  --ok: var(--md-success);
+  --ok-bg: var(--md-success-container);
+  --bad: var(--md-error);
+  --bad-bg: var(--md-error-container);
+  --warn: var(--md-warning);
+  --warn-bg: var(--md-warning-container);
+  --info: var(--md-on-primary-container);
+  --info-bg: var(--md-primary-container);
+  --off: var(--md-on-surface-variant);
+  --off-bg: var(--md-sc-highest);
+  --console-bg: light-dark(#322f35, #0f0d13);
+  --console-fg: #e6e0e9;
+
+  /* --- forma e elevação --- */
+  --radius: 16px;
+  --shadow: none;
+  --md-elev-3: 0 4px 8px 3px light-dark(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.45)), 0 1px 3px rgba(0, 0, 0, 0.3);
+
+  /* --- tipografia: Google Sans/Roboto quando instaladas, senão fonte do sistema --- */
+  --font: 'Google Sans', 'Google Sans Text', Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+  font-size: 14px;
+  letter-spacing: 0.25px;
+
+  /* ---------- estrutura ---------- */
+  & .side { background: var(--md-sc-low); border-right: 0; padding: 12px; gap: 12px; }
+  & .brand { padding: 12px 12px 8px; font-size: 16px; font-weight: 500; letter-spacing: 0; }
+  & .brand small { font-size: 12px; letter-spacing: 0.4px; }
+  & .brand img { border-radius: 12px; }
+  & .nav { gap: 0; }
+  & .nav a { height: 56px; padding: 0 16px; border-radius: 28px; gap: 12px; color: var(--md-on-surface-variant); font-weight: 500; letter-spacing: 0.1px; }
+  & .nav a:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  & .nav a[aria-current='page'] { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+  & .side-foot { font-size: 12px; }
+  & .top { background: var(--md-surface); border-bottom: 1px solid var(--md-outline-variant); padding: 10px 24px; gap: 12px; }
+  & .page { padding: 24px; gap: 16px; }
+
+  /* ---------- tipografia ---------- */
+  & h1 { font-size: 28px; line-height: 36px; font-weight: 400; letter-spacing: 0; }
+  & h2 { font-size: 16px; line-height: 24px; font-weight: 500; letter-spacing: 0.15px; }
+  & h3 { font-size: 16px; font-weight: 500; letter-spacing: 0.15px; }
+  & .page-h p { font-size: 14px; }
+  & .kpi .v { font-weight: 500; letter-spacing: 0; }
+  & .kpi .l { font-weight: 500; letter-spacing: 0.1px; }
+
+  /* ---------- superfícies ---------- */
+  & .card, & .kpi { background: var(--md-sc-low); border: 1px solid var(--md-outline-variant); border-radius: 16px; box-shadow: none; }
+  & .card-h { padding: 16px 20px; }
+  & .card-b { padding: 16px 20px; }
+  & .card-b.flush { padding: 0; }
+  & .chk { padding: 10px 20px; }
+  & .note { border-radius: 12px; background: var(--md-primary-container); color: var(--md-on-primary-container); }
+  & .note.warn { background: var(--md-warning-container); color: var(--md-warning); }
+  & .note.bad { background: var(--md-error-container); color: var(--md-on-error-container); }
+  & code { background: var(--md-sc-highest); border-radius: 6px; }
+  & .mark { border-radius: 12px; background: var(--md-sc); }
+  & .mark.hit { background: var(--md-primary-container); border-color: transparent; }
+  & .mark.hit .l { color: var(--md-on-primary-container); }
+  & .console { border-radius: 12px; }
+  & .frame { border-radius: 12px; border-color: var(--md-outline-variant); }
+  & fieldset { border-color: var(--md-outline-variant); border-radius: 16px; }
+  & .led { width: 10px; height: 10px; }
+
+  /* ---------- botões (M3: outlined / filled / text / icon) ---------- */
+  & .btn { height: 40px; padding: 0 24px; border-radius: 20px; border: 1px solid var(--md-outline); background: transparent; color: var(--md-primary); font-weight: 500; font-size: 14px; letter-spacing: 0.1px; gap: 8px; }
+  & .btn:hover:not(:disabled) { background: color-mix(in srgb, var(--md-primary) 8%, transparent); }
+  & .btn:active:not(:disabled) { background: color-mix(in srgb, var(--md-primary) 12%, transparent); }
+  & .btn.primary { background: var(--md-primary); border-color: transparent; color: var(--md-on-primary); }
+  & .btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--md-primary) 92%, var(--md-on-primary)); filter: none; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15); }
+  & .btn.primary:active:not(:disabled) { background: color-mix(in srgb, var(--md-primary) 88%, var(--md-on-primary)); }
+  & .btn.danger { background: var(--md-error); border-color: transparent; color: var(--md-on-error); }
+  & .btn.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--md-error) 92%, var(--md-on-error)); filter: none; }
+  & .btn.ghost { border-color: transparent; padding: 0 12px; color: var(--md-primary); }
+  & .btn.sm { height: 32px; padding: 0 16px; }
+  & .btn.icon-btn { width: 40px; height: 40px; padding: 0; justify-content: center; border-radius: 50%; color: var(--md-on-surface-variant); }
+  & .btn.icon-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  & .btn:disabled, & .btn.primary:disabled, & .btn.danger:disabled { opacity: 1; cursor: not-allowed; background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); border-color: transparent; color: color-mix(in srgb, var(--md-on-surface) 38%, transparent); }
+  & .btn.ghost:disabled, & .btn.icon-btn:disabled { background: transparent; }
+  & dialog.modal footer .btn:not(.primary):not(.danger) { border-color: transparent; }
+
+  /* ---------- campos (outlined text field) ---------- */
+  & input[type='text'], & input[type='number'], & input[type='url'], & input[type='password'], & select, & textarea { min-height: 40px; padding: 9px 14px; border: 1px solid var(--md-outline); border-radius: 4px; background: transparent; color: var(--md-on-surface); letter-spacing: 0.25px; }
+  & input[type='text']:hover, & input[type='number']:hover, & input[type='url']:hover, & input[type='password']:hover, & select:hover, & textarea:hover { border-color: var(--md-on-surface); }
+  & input[type='text']:focus, & input[type='number']:focus, & input[type='url']:focus, & input[type='password']:focus, & select:focus, & textarea:focus { outline: none; border-color: var(--md-primary); box-shadow: inset 0 0 0 1px var(--md-primary); }
+  & select { border-radius: 8px; }
+  & .field > label { font-size: 12px; font-weight: 500; letter-spacing: 0.4px; color: var(--md-on-surface-variant); }
+  & .field.check > label { font-size: 14px; color: var(--md-on-surface); letter-spacing: 0.25px; }
+  & input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--md-primary); }
+  & button:focus-visible, & a:focus-visible, & .seg button:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+
+  /* ---------- chips, tabelas, passos ---------- */
+  & .pill { border-radius: 8px; padding: 3px 10px; font-weight: 500; letter-spacing: 0.1px; }
+  & .tag { border-radius: 6px; background: var(--md-sc-highest); }
+  & .table th { background: var(--md-sc); color: var(--md-on-surface-variant); font-weight: 500; letter-spacing: 0.1px; }
+  & .table tbody tr.click:hover, & .table tbody tr.sel { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  & .table tbody tr.sel { background: var(--md-secondary-container); }
+  & .step { border-radius: 8px; background: var(--md-sc-high); }
+  & .step .n { background: var(--md-outline-variant); color: var(--md-on-surface); }
+  & .step.done { background: var(--md-success-container); color: var(--md-success); }
+  & .step.done .n { background: var(--md-success); color: var(--md-success-container); }
+  & .step.active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+  & .step.active .n { background: var(--md-primary); color: var(--md-on-primary); }
+  & .strip i.empty { background: var(--md-outline-variant); }
+  & .spinner { border-color: var(--md-outline-variant); border-top-color: var(--md-primary); }
+
+  /* ---------- seletor de aparência (segmented button M3) ---------- */
+  & .seg { border-color: var(--md-outline); background: transparent; }
+  & .seg button { height: 32px; border-right-color: var(--md-outline); color: var(--md-on-surface); letter-spacing: 0.1px; }
+  & .seg button:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  & .seg button[aria-pressed='true'] { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+
+  /* ---------- diálogo (28dp) e snackbar ---------- */
+  & dialog.modal { background: var(--md-sc-high); border: 0; border-radius: 28px; box-shadow: var(--md-elev-3); color: var(--md-on-surface); }
+  & dialog.modal::backdrop { background: color-mix(in srgb, #000 32%, transparent); }
+  & dialog.modal header { padding: 24px 24px 0; border-bottom: 0; }
+  & dialog.modal header h3 { font-size: 24px; line-height: 32px; font-weight: 400; letter-spacing: 0; }
+  & dialog.modal .modal-body { padding: 16px 24px; }
+  & dialog.modal footer { padding: 8px 24px 24px; border-top: 0; }
+  & .toast { border-radius: 4px; background: var(--md-inverse-surface); color: var(--md-inverse-on-surface); box-shadow: var(--md-elev-3); font-weight: 400; letter-spacing: 0.25px; }
+  & .toast.ok, & .toast.error, & .toast.warn { background: var(--md-inverse-surface); color: var(--md-inverse-on-surface); border-left: 4px solid var(--md-success); }
+  & .toast.error { border-left-color: var(--md-error); }
+  & .toast.warn { border-left-color: var(--md-warning); }
+}
+
+@media (max-width: 860px) {
+  html[data-style='m3'] .side { padding: 8px 12px; }
+  html[data-style='m3'] .nav a { height: 44px; border-radius: 22px; }
+}

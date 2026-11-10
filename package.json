@@ -1,0 +1,16 @@
+{
+  "name": "eks-dr-console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Console web para exercícios de RTO/RPO: ligar/desligar clusters Kubernetes/EKS, testar aplicações e gerar relatórios",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "license": "UNLICENSED"
+}
