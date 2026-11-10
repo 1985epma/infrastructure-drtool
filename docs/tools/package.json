@@ -1,0 +1,9 @@
+{
+  "name": "drtool-docs-tools",
+  "private": true,
+  "type": "module",
+  "description": "Gera as imagens e o vídeo do guia (dados fictícios) dirigindo o Chrome com Playwright",
+  "dependencies": {
+    "playwright-core": "^1.50.0"
+  }
+}

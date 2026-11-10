@@ -38,6 +38,20 @@ npm run dev          # recarrega ao editar
 Na primeira execução é criado o **ambiente de demonstração (simulado)**: um cluster fictício com testes apontando
 para endpoints locais `/demo/...` que reagem ao liga/desliga. Dá para rodar um exercício completo sem tocar na AWS.
 
+## Guia ilustrado de testes
+
+Passo a passo com imagens e um vídeo mostrando um exercício completo de RTO/RPO: **[docs/guia-de-testes.md](docs/guia-de-testes.md)**.
+
+### Vídeo de demonstração (60 s, sem áudio)
+
+Painel → testes → exercício ao vivo (falha, recuperação, medição de RPO) → relatório aberto automaticamente.
+
+[![Demonstração em 60 segundos: do painel ao relatório de RTO/RPO](docs/video/demo-preview.gif)](docs/video/demo-60s.mp4)
+
+▶ **[Assistir o vídeo completo (MP4, 1280×720)](docs/video/demo-60s.mp4)** — o GIF acima é só uma prévia.
+
+> Todos os dados do guia e do vídeo são **fictícios** (ambiente simulado "Acme Pagamentos — Produção (fictício)").
+
 ## Instalar como pacote npm (GitHub Packages)
 
 O pacote `@1985epma/infrastructure-drtool` é publicado no registro npm do GitHub (`npm.pkg.github.com`) pelo workflow

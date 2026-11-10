@@ -16,3 +16,4 @@ secrets
 *.key
 Dockerfile
 compose.yaml
+docs
