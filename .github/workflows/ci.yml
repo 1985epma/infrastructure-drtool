@@ -39,6 +39,16 @@ jobs:
       - name: Testes
         run: npm test
 
+      - name: Compose seguro por padrão (token obrigatório)
+        run: |
+          set -eu
+          # o compose padrão nunca pode desligar a autenticação; só o override explícito (compose.noauth.yaml)
+          if grep -n 'ALLOW_NO_AUTH' compose.yaml | grep -v '^[0-9]*:\s*#'; then echo "ERRO: compose.yaml não pode definir ALLOW_NO_AUTH"; exit 1; fi
+          grep -q 'ADMIN_TOKEN_FILE: /run/secrets/admin_token' compose.yaml
+          mkdir -p secrets && openssl rand -hex 24 > secrets/admin_token.txt
+          docker compose -f compose.yaml config -q
+          docker compose -f compose.yaml -f compose.noauth.yaml config -q
+
   docker:
     name: Imagem Docker (build, smoke, Trivy)
     runs-on: ubuntu-latest

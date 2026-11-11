@@ -1,0 +1,15 @@
+# OVERRIDE opt-in: console SEM autenticação (uso interno, rede confiável).
+#
+#   docker compose -f compose.yaml -f compose.noauth.yaml up -d --build
+#
+# ⚠ Qualquer pessoa que alcance a porta pode criar testes/comandos e ligar/desligar a infraestrutura
+#   (o console executa comandos e usa as credenciais AWS/kubeconfig montados). Use só em rede isolada,
+#   com BIND_ADDR=<IP interno> (nunca 0.0.0.0) e ALLOWED_HOSTS. Requer Docker Compose ≥ 2.24 (`!reset`).
+services:
+  drtool:
+    environment:
+      ALLOW_NO_AUTH: "true"
+      ADMIN_TOKEN_FILE: !reset null
+    secrets: !reset []
+
+secrets: !reset {}

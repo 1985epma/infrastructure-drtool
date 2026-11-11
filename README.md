@@ -11,7 +11,7 @@ Console web (Node.js, **zero dependências npm**) para exercícios de **RTO/RPO*
 > [!WARNING]
 > **Esta ferramenta liga, desliga e — no ElastiCache — EXCLUI recursos reais.** Leia antes de usar em produção:
 >
-> - Os fluxos de **EKS, EC2, RDS e ElastiCache foram validados apenas com `aws`/`kubectl` simulados** (75 testes automatizados) e contra um Kubernetes local; **não foram exercitados contra uma conta AWS real**. Comece por um ambiente **descartável** e use o ambiente simulado para treinar.
+> - Os fluxos de **EKS, EC2, RDS e ElastiCache foram validados apenas com `aws`/`kubectl` simulados** (77 testes automatizados) e contra um Kubernetes local; **não foram exercitados contra uma conta AWS real**. Comece por um ambiente **descartável** e use o ambiente simulado para treinar.
 > - O **ElastiCache não tem stop/start**: "desligar" exclui o recurso (com snapshot final) e "ligar" o recria a partir do snapshot — o endpoint pode mudar e os dados gravados depois do snapshot se perdem. A restauração de cache **Serverless** por snapshot não foi confirmada contra a AWS real.
 > - Rode exercícios em **janelas planejadas**; as operações destrutivas exigem confirmação pelo nome do ambiente.
 > - Software fornecido **"como está", sem garantias** (licença [MIT](LICENSE)). Você é responsável pelo que executar na sua infraestrutura.
@@ -42,6 +42,7 @@ npm run dev          # recarrega ao editar
 | `DATA_DIR` | `./data` | Onde ficam ambientes, snapshots, execuções e kubeconfigs |
 | `ADMIN_TOKEN` | — | Token (≥16 caracteres) exigido em todas as chamadas `/api` (`Authorization: Bearer`) |
 | `ALLOWED_HOSTS` | — | Hostnames extras aceitos no cabeçalho `Host` (lista separada por vírgula) |
+| `ALLOW_NO_AUTH` | — | `true` permite escutar fora do localhost **sem** token (opt-in; risco: quem alcança a porta controla o console). Veja `compose.noauth.yaml` |
 
 Na primeira execução é criado o **ambiente de demonstração (simulado)**: um cluster fictício com testes apontando
 para endpoints locais `/demo/...` que reagem ao liga/desliga. Dá para rodar um exercício completo sem tocar na AWS.
@@ -94,7 +95,7 @@ O `Dockerfile` gera uma imagem mínima e endurecida (Node 26 + Alpine, base fixa
 ```bash
 docker build -t infrastructure-drtool .                                  # completa: inclui aws CLI e kubectl (~600 MB)
 docker build --build-arg WITH_TOOLS=false -t infrastructure-drtool:slim .  # sem aws/kubectl (~260 MB)
-docker build --build-arg RUN_TESTS=true -t infrastructure-drtool .       # roda os 75 testes durante o build
+docker build --build-arg RUN_TESTS=true -t infrastructure-drtool .       # roda os 77 testes durante o build
 
 docker run -d --name drtool -p 127.0.0.1:3001:3001 \
   --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
@@ -103,7 +104,18 @@ docker run -d --name drtool -p 127.0.0.1:3001:3001 \
   infrastructure-drtool
 ```
 
-Ou, com Docker secrets e as mesmas restrições, `docker compose up -d --build` (veja o `compose.yaml`).
+Ou, com Docker secrets e as mesmas restrições, `docker compose up -d --build` (veja o `compose.yaml`):
+
+```bash
+mkdir -p secrets && openssl rand -hex 24 > secrets/admin_token.txt   # token (≥ 16 caracteres)
+docker compose up -d --build                                          # token obrigatório (padrão)
+BIND_ADDR=10.0.0.5 ALLOWED_HOSTS=10.0.0.5 docker compose up -d        # rede interna (IP específico, não 0.0.0.0)
+```
+
+> [!CAUTION]
+> **A autenticação é o padrão e só se desliga por opt-in explícito.** O console executa comandos e liga/desliga infraestrutura:
+> quem alcança a porta sem token controla tudo. Para uso interno em rede isolada e confiável, o `compose.noauth.yaml`
+> (`docker compose -f compose.yaml -f compose.noauth.yaml up -d`, Compose ≥ 2.24) define `ALLOW_NO_AUTH=true` e remove o secret.
 
 **O que a imagem faz para reduzir superfície:**
 

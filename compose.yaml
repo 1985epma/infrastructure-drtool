@@ -2,6 +2,10 @@
 #   mkdir -p secrets && openssl rand -hex 24 > secrets/admin_token.txt   # token (≥ 16 caracteres)
 #   docker compose up -d --build
 #   abrir http://127.0.0.1:3001 e informar o token quando solicitado
+#
+# Autenticação é o PADRÃO: o console executa comandos e liga/desliga infraestrutura, então quem
+# alcança a porta sem token controla tudo. Rede interna: BIND_ADDR=<IP interno> e ALLOWED_HOSTS=<host>.
+# Uso interno SEM token (opt-in explícito, risco assumido): veja compose.noauth.yaml.
 services:
   drtool:
     build:
@@ -10,11 +14,11 @@ services:
         WITH_TOOLS: "true"          # "false" = imagem enxuta sem aws CLI/kubectl
     image: infrastructure-drtool:local
     ports:
-      # Padrão: só localhost. Para a rede interna defina o IP interno do host: BIND_ADDR=10.0.0.5 docker-compose up -d
-      # (não use 0.0.0.0: o console está sem autenticação)
+      # Padrão: só localhost. Para a rede interna defina o IP interno do host: BIND_ADDR=10.0.0.5 docker compose up -d
+      # (evite 0.0.0.0: prefira o IP interno específico)
       - "${BIND_ADDR:-127.0.0.1}:3001:3001"
     environment:
-      ALLOW_NO_AUTH: "true"         # SEM autenticação. Para reativar: remova esta linha e use ADMIN_TOKEN_FILE + secret abaixo
+      ADMIN_TOKEN_FILE: /run/secrets/admin_token   # token vindo do Docker secret abaixo (nunca em variável/imagem)
       ALLOWED_HOSTS: "${ALLOWED_HOSTS:-}"       # hostname/IP usado no acesso interno, ex.: 10.0.0.5,drtool.interno
       # AWS_REGION: us-east-1
       # AWS_PROFILE: meu-perfil
@@ -35,6 +39,12 @@ services:
     mem_limit: 512m
     cpus: 1.0
     restart: unless-stopped
+    secrets:
+      - admin_token
+
+secrets:
+  admin_token:
+    file: ./secrets/admin_token.txt
 
 volumes:
   drtool-data:
