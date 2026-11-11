@@ -45,7 +45,10 @@ if (!adminToken && process.env.ADMIN_TOKEN_FILE) {
 const allowedHosts = (process.env.ALLOWED_HOSTS || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 // Esta ferramenta liga/desliga infraestrutura: só aceita conexões externas com token.
-if (!isLoopback(host) && !adminToken) {
+// ALLOW_NO_AUTH=true desliga essa trava (opt-in explícito: qualquer um que alcance a porta controla o console).
+const noAuth = process.env.ALLOW_NO_AUTH === 'true';
+if (noAuth && !adminToken) console.warn('AVISO: ALLOW_NO_AUTH=true — console sem autenticação.');
+if (!isLoopback(host) && !adminToken && !noAuth) {
   console.error(`Recusando iniciar em HOST=${host} sem ADMIN_TOKEN.\nDefina ADMIN_TOKEN=<segredo longo> para expor o console além do localhost.`);
   process.exit(1);
 }

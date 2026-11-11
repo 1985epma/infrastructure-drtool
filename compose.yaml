@@ -10,14 +10,14 @@ services:
         WITH_TOOLS: "true"          # "false" = imagem enxuta sem aws CLI/kubectl
     image: infrastructure-drtool:local
     ports:
-      - "127.0.0.1:3001:3001"       # exposto só no localhost do host; use um proxy TLS para acesso remoto
+      # Padrão: só localhost. Para a rede interna defina o IP interno do host: BIND_ADDR=10.0.0.5 docker-compose up -d
+      # (não use 0.0.0.0: o console está sem autenticação)
+      - "${BIND_ADDR:-127.0.0.1}:3001:3001"
     environment:
-      ADMIN_TOKEN_FILE: /run/secrets/admin_token
-      # ALLOWED_HOSTS: console.exemplo.com      # se acessar por outro hostname
+      ALLOW_NO_AUTH: "true"         # SEM autenticação. Para reativar: remova esta linha e use ADMIN_TOKEN_FILE + secret abaixo
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-}"       # hostname/IP usado no acesso interno, ex.: 10.0.0.5,drtool.interno
       # AWS_REGION: us-east-1
       # AWS_PROFILE: meu-perfil
-    secrets:
-      - admin_token
     volumes:
       - drtool-data:/data
       # credenciais AWS (somente leitura). Para SSO use `aws sso login` no host e monte também o cache,
@@ -35,10 +35,6 @@ services:
     mem_limit: 512m
     cpus: 1.0
     restart: unless-stopped
-
-secrets:
-  admin_token:
-    file: ./secrets/admin_token.txt
 
 volumes:
   drtool-data:
