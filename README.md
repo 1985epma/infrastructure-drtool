@@ -60,11 +60,24 @@ Painel → testes → exercício ao vivo (falha, recuperação, medição de RPO
 
 > Todos os dados do guia e do vídeo são **fictícios** (ambiente simulado "Acme Pagamentos — Produção (fictício)").
 
-## Instalar como pacote npm (GitHub Packages)
+## Instalar (npm)
 
-O pacote `@1985epma/infrastructure-drtool` é publicado no registro npm do GitHub (`npm.pkg.github.com`) pelo workflow
-`.github/workflows/publish.yml` (ao publicar um Release, ou manualmente em *Actions → Run workflow*). Como o repositório
-é privado, a instalação exige um token pessoal (classic) com o escopo `read:packages`:
+Requer Node ≥ 26. Há duas formas; a primeira **não precisa de token**.
+
+**1) Direto do repositório (sem conta nem token)** — fixe uma versão (tag):
+
+```bash
+npm install -g github:1985epma/infrastructure-drtool#v1.1.1
+epma-drtool --help
+epma-drtool            # http://127.0.0.1:3001 — dados em ./data (pasta onde o comando é executado)
+
+# sem instalar:
+npx github:1985epma/infrastructure-drtool#v1.1.1
+```
+
+**2) Pelo GitHub Packages** (`@1985epma/infrastructure-drtool`, publicado pelo workflow `.github/workflows/publish.yml` a cada Release).
+O registro npm do GitHub **exige autenticação para instalar, mesmo sendo um pacote público**: use um token pessoal (classic)
+de qualquer conta, com o escopo `read:packages`:
 
 ```bash
 # ~/.npmrc (uma vez)
@@ -72,11 +85,7 @@ O pacote `@1985epma/infrastructure-drtool` é publicado no registro npm do GitHu
 //npm.pkg.github.com/:_authToken=SEU_TOKEN_COM_read:packages
 
 npm install -g @1985epma/infrastructure-drtool
-epma-drtool --help
-epma-drtool            # http://127.0.0.1:3001 — dados em ./data (pasta onde o comando é executado)
 ```
-
-Sem instalar: `npx @1985epma/infrastructure-drtool`. Requer Node ≥ 26.
 
 ## Docker (imagem endurecida)
 
