@@ -1,0 +1,10 @@
+# OVERRIDE: dá ao container acesso (somente leitura) a um cluster Kubernetes local (Docker Desktop/kind).
+#
+#   scripts/kubeconfig-for-container.sh                       # gera secrets/kubeconfig-docker-desktop.yaml
+#   docker compose -f compose.yaml -f compose.k8s.yaml up -d  # combine com compose.noauth.yaml se quiser
+#
+# No console: provider "Kubernetes (k8s)", contexto "docker-desktop".
+services:
+  drtool:
+    volumes:
+      - ./secrets/kubeconfig-docker-desktop.yaml:/home/app/.kube/config:ro

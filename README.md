@@ -133,7 +133,7 @@ BIND_ADDR=10.0.0.5 ALLOWED_HOSTS=10.0.0.5 docker compose up -d        # rede int
 
 - o `docker-cli` **não** é instalado de propósito (usá-lo exigiria montar `/var/run/docker.sock`, o que equivale a root no host); por isso, dentro do container, recursos que dependem do Docker do host (listar containers no wizard, canário via `docker exec`) não funcionam;
 - credenciais AWS: prefira variáveis `AWS_*`, role/IRSA ou monte `~/.aws` (somente leitura);
-- para `kubectl`/Kubernetes local, monte o kubeconfig e lembre que `127.0.0.1` dentro do container não é o host (Docker Desktop: use `host.docker.internal` no `server:` do kubeconfig);
+- para `kubectl`/Kubernetes local, monte o kubeconfig e lembre que `127.0.0.1` dentro do container não é o host. Atalho: `scripts/kubeconfig-for-container.sh` gera um kubeconfig mínimo (só o contexto escolhido, servidor em `host.docker.internal` com `tls-server-name=localhost`, TLS continua verificado) em `secrets/`, e `docker compose -f compose.yaml -f compose.k8s.yaml up -d` o monta somente leitura. O Docker Desktop muda a porta do apiserver ao reiniciar o Kubernetes: rode o script de novo;
 - para receber correções de segurança, atualize o digest da base (`ARG NODE_IMAGE`) e reconstrua; um scan como `trivy image infrastructure-drtool` é recomendado no CI.
 
 ## Providers
