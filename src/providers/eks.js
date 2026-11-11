@@ -125,12 +125,15 @@ export function createEksProvider(env, { store }) {
       const data = JSON.parse(await kubectl(['get', 'deployments,statefulsets', '-n', ns, '-o', 'json'], { signal: ctx.signal }));
       for (const item of data.items) {
         const replicas = item.spec?.replicas ?? 0;
+        if (replicas <= 0) continue;
         const key = `${ns}/${item.kind.toLowerCase()}/${item.metadata.name}`;
-        if (replicas > 0) snapshot.workloads[key] = replicas;
-        if (replicas > 0) {
-          await kubectl(['scale', '-n', ns, `${item.kind.toLowerCase()}/${item.metadata.name}`, '--replicas=0'], { signal: ctx.signal });
-          ctx.log('info', `Escalado para 0: ${key} (era ${replicas})`);
-        }
+        // Grava a escala original em disco ANTES de zerar: se um `scale` falhar no meio (ou o processo
+        // cair), o que já foi para 0 continua restaurável (nunca sobrescreve um valor válido com zero).
+        snapshot.workloads[key] = replicas;
+        snapshot.savedAt = nowIso();
+        await store.setState(env.id, snapshot);
+        await kubectl(['scale', '-n', ns, `${item.kind.toLowerCase()}/${item.metadata.name}`, '--replicas=0'], { signal: ctx.signal });
+        ctx.log('info', `Escalado para 0: ${key} (era ${replicas})`);
       }
     }
   }
