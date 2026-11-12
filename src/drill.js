@@ -180,6 +180,8 @@ export async function runDrill({ env, provider, store, origin, params }, job, si
     ts.failureAt = Date.now();
     job.live.failureAt = ts.failureAt;
     failureInjected = true;
+    // marcador em disco ANTES de desligar: se o processo morrer (OOM, SIGKILL) o próximo boot sabe que o ambiente pode estar parado
+    await store.markInflight(env.id, { kind: 'drill', runId: job.id, envName: env.name, since: nowIso() });
     log('warn', 'FALHA INJETADA — o relógio do RTO começou.');
     await provider.stop(opCtx);
     ts.stoppedAt = Date.now();
@@ -217,6 +219,7 @@ export async function runDrill({ env, provider, store, origin, params }, job, si
     log('info', 'Recuperação iniciada.');
     await provider.start(opCtx);
     recoveryDone = true;
+    await store.clearInflight(env.id);
     ts.infraReadyAt = Date.now();
     job.live.infraReadyAt = ts.infraReadyAt;
 
@@ -293,6 +296,7 @@ export async function runDrill({ env, provider, store, origin, params }, job, si
       try {
         await provider.start({ log, signal: new AbortController().signal });
         recoveryDone = true;
+        await store.clearInflight(env.id);
         ts.infraReadyAt ??= Date.now();
         log('ok', 'Recuperação de segurança concluída.');
       } catch (err) {
@@ -407,6 +411,7 @@ export async function runPowerOperation(kind, { env, provider, store, origin }, 
   try {
     log('info', kind === 'stop' ? 'Desligando o ambiente…' : 'Ligando o ambiente…');
     await provider[kind]({ log, signal });
+    if (kind === 'start') await store.clearInflight(env.id); // religado: encerra o aviso de "operação interrompida"
     if (kind === 'start' && env.checks.length) {
       log('info', 'Aguardando os testes das aplicações ficarem saudáveis…');
       job.live.phase = 'validate';

@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { AbortedError } from './util.js';
 
 const MAX_CAPTURE = 1024 * 1024; // 1 MiB por stream
+const MAX_LINE = 64 * 1024; // linha sem \n acima disso é emitida em pedaços (evita crescimento ilimitado)
 
 /**
  * Executa `cmd` com `args` (argv, nunca interpretado por shell).
@@ -45,6 +46,10 @@ export function run(cmd, args = [], opts = {}) {
           const line = pending[which].slice(0, idx).replace(/\r$/, '');
           pending[which] = pending[which].slice(idx + 1);
           if (line.trim()) onLine(line, which === 'out' ? 'stdout' : 'stderr');
+        }
+        while (pending[which].length > MAX_LINE) {
+          onLine(pending[which].slice(0, MAX_LINE), which === 'out' ? 'stdout' : 'stderr');
+          pending[which] = pending[which].slice(MAX_LINE);
         }
       }
     };
