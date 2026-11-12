@@ -61,6 +61,9 @@ if (adminToken && adminToken.length < 16) {
 const dataDir = process.env.DATA_DIR || join(process.cwd(), 'data');
 const app = await createApp({ host, port, adminToken, allowedHosts, dataDir });
 const seeded = await app.seedDemo();
+for (const m of await app.store.listInflight()) {
+  console.warn(`AVISO: o exercício "${m.runId}" do ambiente "${m.envName}" foi interrompido em ${m.since} (processo encerrado no meio da falha). O ambiente pode estar DESLIGADO — abra o console e use "Ligar".`);
+}
 const { port: actual } = await app.listen();
 
 console.log(`EPMA | Infrastructure & DR Tool rodando em http://${host === '0.0.0.0' ? 'localhost' : host}:${actual}  (Node ${process.version})`);

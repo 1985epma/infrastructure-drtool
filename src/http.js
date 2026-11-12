@@ -1,7 +1,7 @@
 // Mini-framework HTTP sobre node:http (roteamento, JSON, estáticos, cabeçalhos de segurança).
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { extname, join, normalize, sep } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { HttpError } from './util.js';
 
 const MAX_BODY = 1024 * 1024;
@@ -47,7 +47,13 @@ export class Router {
       const m = r.re.exec(pathname);
       if (!m) continue;
       pathMatched = true;
-      if (r.method === method) return { handler: r.handler, params: Object.fromEntries(Object.entries(m.groups ?? {}).map(([k, v]) => [k, decodeURIComponent(v)])) };
+      if (r.method === method) {
+        try {
+          return { handler: r.handler, params: Object.fromEntries(Object.entries(m.groups ?? {}).map(([k, v]) => [k, decodeURIComponent(v)])) };
+        } catch {
+          throw new HttpError(400, 'Parâmetro de URL inválido');
+        }
+      }
     }
     return { pathMatched };
   }
@@ -106,8 +112,9 @@ export async function serveStatic(req, res, publicDir, pathname) {
     return false;
   }
   if (decoded.includes('\0')) return false;
-  const full = normalize(join(publicDir, decoded));
-  if (full !== publicDir && !full.startsWith(publicDir + sep)) return false; // path traversal
+  const root = resolve(publicDir);
+  const full = normalize(join(root, decoded));
+  if (full !== root && !full.startsWith(root + sep)) return false; // path traversal
   try {
     const st = await stat(full);
     if (!st.isFile()) return false;

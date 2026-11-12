@@ -96,6 +96,9 @@ export function mount(root) {
     );
     clear(infraBody);
     if (!st) return infraBody.append(h('div', { class: 'muted' }, 'Consultando o ambiente…'));
+    if (st.interrupted) {
+      infraBody.append(h('div', { class: 'note bad' }, h('strong', {}, 'Exercício interrompido: '), `o servidor foi encerrado no meio do exercício (${fmtDateTime(st.interrupted.since)}). O ambiente pode estar desligado — use "Ligar" para restaurá-lo.`));
+    }
     if (st.note) infraBody.append(h('div', { class: `note ${['error', 'missing'].includes(st.state) ? 'bad' : ''}` }, st.note));
     const dl = h('dl', { class: 'dl' }, h('dt', {}, 'Provider'), h('dd', {}, PROVIDER[env.provider]));
     const cluster = st.cluster?.name ?? env.eks?.clusterName;

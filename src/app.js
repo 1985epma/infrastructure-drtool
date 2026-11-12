@@ -1,6 +1,6 @@
 // Montagem da aplicação: rotas da API, segurança e ciclo de vida do servidor.
 import { createServer } from 'node:http';
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,12 +24,32 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
 export const isLoopback = (host) => LOOPBACK.has(String(host).toLowerCase());
 
-export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.1', port = 3001, adminToken = '', allowedHosts = [], publicDir = join(ROOT, 'public') } = {}) {
+export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.1', port = 3001, adminToken = '', allowedHosts = [], publicDir: publicDirOpt = join(ROOT, 'public') } = {}) {
+  const publicDir = resolve(publicDirOpt);
   const store = new Store(resolve(dataDir));
   await store.init();
   const jobs = new JobManager();
   const hostAllow = new Set([...LOOPBACK, ...allowedHosts.map((h) => h.toLowerCase())]);
+  const sha = (v) => createHash('sha256').update(String(v)).digest();
   const tokenBuf = adminToken ? Buffer.from(adminToken) : null;
+  const tokenHash = tokenBuf ? sha(adminToken) : null; // compara hashes: tempo constante e sem vazar o tamanho do token
+  // freio de força bruta: após AUTH_MAX_FAILS tokens errados em AUTH_WINDOW_MS, o IP recebe 429 até a janela expirar
+  const authFails = new Map();
+  const AUTH_MAX_FAILS = 10;
+  const AUTH_WINDOW_MS = 60_000;
+  const authBlockedFor = (ip) => {
+    const f = authFails.get(ip);
+    if (!f) return 0;
+    if (Date.now() >= f.resetAt) return authFails.delete(ip), 0;
+    return f.count >= AUTH_MAX_FAILS ? Math.ceil((f.resetAt - Date.now()) / 1000) : 0;
+  };
+  const authFailed = (ip) => {
+    const now = Date.now();
+    for (const [k, v] of authFails) if (now >= v.resetAt) authFails.delete(k); // limpeza: o mapa não cresce sem limite
+    const f = authFails.get(ip);
+    if (f) f.count++;
+    else authFails.set(ip, { count: 1, resetAt: now + AUTH_WINDOW_MS });
+  };
   let actualPort = port;
   const origin = () => `http://127.0.0.1:${actualPort}`;
 
@@ -47,11 +67,16 @@ export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.
   const getStatus = (env, force) => {
     const hit = statusCache.get(env.id);
     if (hit && !force && Date.now() - hit.at < 4000) return hit.promise;
-    const promise = getProvider(env)
+    const entry = { at: Date.now(), promise: null };
+    entry.promise = getProvider(env)
       .status({})
-      .catch((err) => ({ state: 'error', note: err.message }));
-    statusCache.set(env.id, { at: Date.now(), promise });
-    return promise;
+      .catch((err) => {
+        // erro transitório (ex.: throttling da AWS) não pode "grudar" por 4s: quem consultou junto recebe o erro, o próximo tenta de novo
+        if (statusCache.get(env.id) === entry) statusCache.delete(env.id);
+        return { state: 'error', note: err.message };
+      });
+    statusCache.set(env.id, entry);
+    return entry.promise;
   };
 
   // ---------- ferramentas instaladas ----------
@@ -78,6 +103,7 @@ export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.
     tools: await getTools(query.get('refresh') === '1'),
     authRequired: Boolean(tokenBuf),
     origin: origin(),
+    interrupted: (await store.listInflight()).filter((m) => !(jobs.running && jobs.current.envId === m.envId)),
   }));
 
   r.get('/api/environments', () => store.listEnvironments());
@@ -88,10 +114,14 @@ export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.
   });
   r.get('/api/environments/:id', ({ params }) => requireEnv(params.id));
   r.put('/api/environments/:id', async ({ params, body }) => {
-    const existing = await requireEnv(params.id);
-    if (jobs.running && jobs.current.envId === existing.id) throw new HttpError(409, 'Há uma operação em andamento neste ambiente.');
-    const env = normalizeEnvironment(body, { existing });
-    await store.saveEnvironment(env);
+    // leitura + checagens + gravação dentro da fila do Store: PUTs concorrentes não perdem atualização
+    const env = await store.updateEnvironment(params.id, (existing) => {
+      if (jobs.running && jobs.current.envId === existing.id) throw new HttpError(409, 'Há uma operação em andamento neste ambiente.');
+      if (typeof body?.updatedAt === 'string' && body.updatedAt !== existing.updatedAt) {
+        throw new HttpError(409, 'O ambiente foi alterado por outra sessão. Recarregue a página e refaça a edição.');
+      }
+      return normalizeEnvironment(body, { existing });
+    });
     statusCache.delete(env.id);
     return env;
   });
@@ -105,7 +135,14 @@ export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.
 
   r.get('/api/environments/:id/status', async ({ params, query }) => {
     const env = await requireEnv(params.id);
-    return { ...(await getStatus(env, query.get('force') === '1')), checkedAt: new Date().toISOString() };
+    const status = await getStatus(env, query.get('force') === '1');
+    // operação interrompida (crash no meio de um exercício): avisa até o ambiente voltar a "running"
+    let interrupted = jobs.running && jobs.current.envId === env.id ? null : await store.getInflight(env.id);
+    if (interrupted && status.state === 'running') {
+      await store.clearInflight(env.id);
+      interrupted = null;
+    }
+    return { ...status, ...(interrupted ? { interrupted } : {}), checkedAt: new Date().toISOString() };
   });
 
   const startJob = (kind, env, body) => {
@@ -262,9 +299,17 @@ export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.
           throw new HttpError(404, 'Rota não encontrada');
         }
         if (isApi) {
-          if (tokenBuf) {
-            const got = Buffer.from(String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, ''));
-            if (got.length !== tokenBuf.length || !timingSafeEqual(got, tokenBuf)) throw new HttpError(401, 'Token ausente ou inválido');
+          if (tokenHash) {
+            const ip = req.socket.remoteAddress ?? '?';
+            const wait = authBlockedFor(ip);
+            if (wait) {
+              res.setHeader('retry-after', wait);
+              throw new HttpError(429, `Muitas tentativas de autenticação. Tente novamente em ${wait}s.`);
+            }
+            if (!timingSafeEqual(sha(String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '')), tokenHash)) {
+              authFailed(ip);
+              throw new HttpError(401, 'Token ausente ou inválido');
+            }
           }
           if (!['GET', 'HEAD'].includes(req.method)) {
             const o = req.headers.origin;
@@ -297,7 +342,7 @@ export async function createApp({ dataDir = join(ROOT, 'data'), host = '127.0.0.
       if (err instanceof HttpError) return sendJson(res, err.status, { error: err.message, details: err.details });
       if (err instanceof UserError) return sendJson(res, 400, { error: err.message });
       console.error('[erro]', err);
-      return sendJson(res, 500, { error: err.message || 'Erro interno' });
+      return sendJson(res, 500, { error: 'Erro interno do servidor (detalhes no log do servidor).' });
     }
   });
 

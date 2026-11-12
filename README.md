@@ -11,7 +11,7 @@ Console web (Node.js, **zero dependências npm**) para exercícios de **RTO/RPO*
 > [!WARNING]
 > **Esta ferramenta liga, desliga e — no ElastiCache — EXCLUI recursos reais.** Leia antes de usar em produção:
 >
-> - Os fluxos de **EKS, EC2, RDS e ElastiCache foram validados apenas com `aws`/`kubectl` simulados** (77 testes automatizados) e contra um Kubernetes local; **não foram exercitados contra uma conta AWS real**. Comece por um ambiente **descartável** e use o ambiente simulado para treinar.
+> - Os fluxos de **EKS, EC2, RDS e ElastiCache foram validados apenas com `aws`/`kubectl` simulados** (90 testes automatizados) e contra um Kubernetes local; **não foram exercitados contra uma conta AWS real**. Comece por um ambiente **descartável** e use o ambiente simulado para treinar.
 > - O **ElastiCache não tem stop/start**: "desligar" exclui o recurso (com snapshot final) e "ligar" o recria a partir do snapshot — o endpoint pode mudar e os dados gravados depois do snapshot se perdem. A restauração de cache **Serverless** por snapshot não foi confirmada contra a AWS real.
 > - Rode exercícios em **janelas planejadas**; as operações destrutivas exigem confirmação pelo nome do ambiente.
 > - Software fornecido **"como está", sem garantias** (licença [MIT](LICENSE)). Você é responsável pelo que executar na sua infraestrutura.
@@ -95,7 +95,7 @@ O `Dockerfile` gera uma imagem mínima e endurecida (Node 26 + Alpine, base fixa
 ```bash
 docker build -t infrastructure-drtool .                                  # completa: inclui aws CLI e kubectl (~600 MB)
 docker build --build-arg WITH_TOOLS=false -t infrastructure-drtool:slim .  # sem aws/kubectl (~260 MB)
-docker build --build-arg RUN_TESTS=true -t infrastructure-drtool .       # roda os 77 testes durante o build
+docker build --build-arg RUN_TESTS=true -t infrastructure-drtool .       # roda os 90 testes durante o build
 
 docker run -d --name drtool -p 127.0.0.1:3001:3001 \
   --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
@@ -475,6 +475,9 @@ Markdown, CSV das amostras, JSON bruto, observações editáveis e o **relatóri
 - Os endpoints de descoberta (`/api/discover/*`) são `GET`, somente leitura, com parâmetros validados e sem shell.
 - ElastiCache só pode ser configurado com `acknowledgeDelete` marcado (o recurso é excluído e recriado, não parado).
 - Nenhum comando passa por shell; nomes de cluster/região/perfil são validados por regex; uma única operação por vez.
+- Token comparado por hash (tempo constante) e **freio de força bruta**: 10 tokens errados em 60 s bloqueiam o IP com `429` + `Retry-After`. Erros internos não vazam detalhes ao cliente (ficam no log).
+- **Exercício interrompido:** se o processo morrer entre a falha injetada e a recuperação (OOM, `SIGKILL`), um marcador em `data/inflight/` permanece. No próximo boot o servidor avisa no log e o painel do ambiente mostra o alerta até você usar **Ligar** (o aviso também some sozinho se o ambiente voltar a `running`).
+- Editar um ambiente é atômico: `PUT` com `updatedAt` desatualizado recebe `409` (edição concorrente). Excluir um ambiente remove snapshot, kubeconfig e marcador; os **relatórios (execuções) são mantidos** como histórico.
 - Sem credenciais armazenadas: usa o perfil/variáveis AWS do processo. Relatórios escapam todo texto dinâmico; CSV neutraliza injeção de fórmulas.
 
 ## Estrutura

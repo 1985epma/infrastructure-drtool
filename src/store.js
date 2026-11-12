@@ -17,11 +17,12 @@ export class Store {
     this.stateDir = join(dir, 'state');
     this.runsDir = join(dir, 'runs');
     this.kubeDir = join(dir, 'kubeconfig');
+    this.inflightDir = join(dir, 'inflight');
     this._writeChain = Promise.resolve();
   }
 
   async init() {
-    await Promise.all([this.dir, this.stateDir, this.runsDir, this.kubeDir].map((d) => mkdir(d, { recursive: true, mode: 0o700 })));
+    await Promise.all([this.dir, this.stateDir, this.runsDir, this.kubeDir, this.inflightDir].map((d) => mkdir(d, { recursive: true, mode: 0o700 })));
   }
 
   // serializa gravações para evitar corridas entre requisições
@@ -54,13 +55,62 @@ export class Store {
     });
   }
 
+  /**
+   * Lê-modifica-grava UM ambiente dentro da fila de escrita (sem lost update entre PUTs concorrentes).
+   * `mutator(existing)` devolve o novo ambiente (ou lança para abortar).
+   */
+  updateEnvironment(id, mutator) {
+    return this._serial(async () => {
+      const list = await this.listEnvironments();
+      const idx = list.findIndex((e) => e.id === id);
+      if (idx < 0) throw new HttpError(404, 'Ambiente não encontrado');
+      const env = await mutator(list[idx]);
+      list[idx] = env;
+      await writeJsonAtomic(this.envFile, { environments: list });
+      return env;
+    });
+  }
+
+  /**
+   * Remove o ambiente e seus arquivos auxiliares (snapshot de escala, kubeconfig — pode conter credenciais — e marcador de operação).
+   * As execuções (relatórios) são MANTIDAS: são histórico de auditoria e carregam o nome do ambiente.
+   */
   deleteEnvironment(id) {
     return this._serial(async () => {
+      assertId(id);
       const list = await this.listEnvironments();
       if (!list.some((e) => e.id === id)) throw new HttpError(404, 'Ambiente não encontrado');
       await writeJsonAtomic(this.envFile, { environments: list.filter((e) => e.id !== id) });
-      await rm(join(this.stateDir, `${assertId(id)}.json`), { force: true });
+      await Promise.all([join(this.stateDir, `${id}.json`), this.kubeconfigPath(id), join(this.inflightDir, `${id}.json`)].map((f) => rm(f, { force: true })));
     });
+  }
+
+  // ---------- marcador de operação em andamento (sobrevive a crash do processo) ----------
+  markInflight(envId, info) {
+    return this._serial(() => writeJsonAtomic(join(this.inflightDir, `${assertId(envId)}.json`), { envId, ...info }));
+  }
+
+  clearInflight(envId) {
+    return this._serial(() => rm(join(this.inflightDir, `${assertId(envId)}.json`), { force: true }));
+  }
+
+  async getInflight(envId) {
+    return readJson(join(this.inflightDir, `${assertId(envId)}.json`), null);
+  }
+
+  async listInflight() {
+    let files = [];
+    try {
+      files = (await readdir(this.inflightDir)).filter((f) => f.endsWith('.json'));
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+    const out = [];
+    for (const f of files) {
+      const m = await readJson(join(this.inflightDir, f), null).catch(() => null);
+      if (m) out.push(m);
+    }
+    return out;
   }
 
   // ---------- snapshot de escala (necessário para religar) ----------
@@ -102,7 +152,7 @@ export class Store {
 
   async deleteRun(id) {
     await this.getRun(id);
-    await rm(join(this.runsDir, `${assertId(id)}.json`), { force: true });
+    await this._serial(() => rm(join(this.runsDir, `${assertId(id)}.json`), { force: true }));
   }
 
   /** Lista execuções (mais recentes primeiro), sem os campos pesados. */
